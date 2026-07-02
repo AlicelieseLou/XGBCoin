@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Hugging Face Spaces specific (Opsional, tapi jika file .pkl sangat besar > 50MB, sebaiknya tidak masuk GitHub biasa dan di-upload manual)
+# app/model/*.pkl 
+
+# Mac/Windows
+.DS_Store
+Thumbs.db

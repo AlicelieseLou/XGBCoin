@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Real-time Bitcoin price direction prediction using the XGBoost machine learning algorithm, Coinbase API market data, and 30 technical indicators. Interactive dashboard providing hourly probability forecasts and live Bitcoin market analysis.">
+    <title>XGBCoin | Real-Time Bitcoin Price Direction Prediction</title>
+    <link rel="icon" type="image/png" href="public/logo.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=2">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm" style="background-color: #0d1117; border-bottom: 1px solid #30363d;">
+        <div class="container-fluid px-lg-5">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#">
+                <img src="public/logo.png" alt="Logo" width="32" height="32" class="d-inline-block align-text-top rounded-circle">
+                <span class="text-white tracking-wide">XGBCoin</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item mt-2 mt-lg-0">
+                        <a class="btn btn-outline-secondary d-flex align-items-center gap-2 rounded-3 px-3 py-2 text-white border-secondary hover-bg-secondary" href="https://github.com/AlicelieseLou" target="_blank" rel="noopener noreferrer">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-github" viewBox="0 0 16 16">
+                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                            </svg>
+                            <span id="github-username">GitHub</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <style>
+        html { scroll-behavior: smooth; }
+        .hover-white:hover { color: #ffffff !important; transition: 0.2s; }
+        .hover-bg-secondary:hover { background-color: rgba(255,255,255,0.1); transition: 0.2s; }
+        #chart-section, #prediction-section, #faq-section {
+            scroll-margin-top: 80px;
+        }
+        @media (max-width: 991.98px) {
+            .prediction-panel .border-end {
+                border-right: none !important;
+                border-bottom: 1px solid rgba(108, 117, 125, 0.25) !important;
+            }
+            #prediction-panel-container .d-flex.align-items-center.w-100 {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            #prediction-boxes {
+                order: 1;
+                width: 100% !important;
+                flex: 0 0 100% !important;
+                margin-bottom: 1.5rem;
+            }
+            #btn-pred-prev {
+                order: 2;
+                margin-right: 1rem !important;
+                margin-left: 0 !important;
+            }
+            #btn-pred-next {
+                order: 3;
+                margin-left: 1rem !important;
+                margin-right: 0 !important;
+            }
+            #pred-time, #faq-title {
+                font-size: 1.25rem !important;
+            }
+        }
+    </style>
+    <div class="container-fluid py-4 px-lg-5">
+        <div class="hero-section py-5 mb-5 text-center position-relative rounded-4 overflow-hidden shadow-lg" style="background: linear-gradient(145deg, #161b22, #0d1117); border: 1px solid rgba(255,255,255,0.05);">
+            <div class="position-absolute top-50 start-50 translate-middle" style="width: 800px; height: 800px; background: radial-gradient(circle, rgba(0, 210, 255, 0.08) 0%, rgba(13, 17, 23, 0) 60%); z-index: 0; pointer-events: none;"></div>
+            <div class="container position-relative px-3" style="z-index: 1;">
+                <div class="d-inline-flex align-items-center gap-2 rounded-pill mb-4 px-3 py-2" style="background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.2); color: #00d2ff; font-weight: 600; font-size: 0.9rem; letter-spacing: 0.5px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16">
+                      <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/>
+                    </svg>
+                    Menggunakan Algoritma Machine Learning XGBoost
+                </div>
+                <h1 class="display-4 fw-bold text-white mb-3" style="letter-spacing: -1px;">
+                    Sistem Prediksi Arah Harga <span style="background: -webkit-linear-gradient(45deg, #00d2ff, #3a7bd5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Bitcoin</span> Secara Real-Time
+                </h1>
+                <p class="lead text-light-50 mx-auto mb-5" style="max-width: 750px; font-size: 1.15rem; line-height: 1.7;">
+                    Aplikasi ini mengintegrasikan data pasar Bitcoin secara real-time dari Coinbase API dengan 30 indikator teknikal sebagai masukan untuk model XGBoost dalam memprediksi arah pergerakan harga Bitcoin pada periode satu jam berikutnya
+                </p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <button type="button" onclick="document.getElementById('chart-section').scrollIntoView({behavior: 'smooth'})" class="btn btn-lg px-5 py-3 rounded-pill fw-bold shadow" style="background: #00d2ff; color: #0d1117; border: none; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 20px rgba(0,210,255,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-graph-up-arrow me-2" viewBox="0 0 16 16">
+                          <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm10 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V4.9l-3.613 4.417a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61L13.445 4H10.5a.5.5 0 0 1-.5-.5"/>
+                        </svg>
+                        Mulai Analisis Pasar
+                    </button>
+                    <button type="button" onclick="document.getElementById('faq-section').scrollIntoView({behavior: 'smooth'})" class="btn btn-lg px-5 py-3 rounded-pill fw-semibold text-white shadow-sm" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(-3px)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
+                        Pelajari Cara Kerja
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="toolbar-premium d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3 p-2 rounded-3 shadow-sm">
+            <div class="timeframe-group d-flex gap-2 overflow-auto py-1 px-1">
+                <button type="button" class="btn btn-timeframe active" data-interval="1m">1M</button>
+                <button type="button" class="btn btn-timeframe" data-interval="5m">5M</button>
+                <button type="button" class="btn btn-timeframe" data-interval="15m">15M</button>
+                <button type="button" class="btn btn-timeframe" data-interval="30m">30M</button>
+                <div class="vr mx-2 bg-secondary opacity-25 my-1"></div>
+                <button type="button" class="btn btn-timeframe" data-interval="1h">1H</button>
+                <button type="button" class="btn btn-timeframe" data-interval="2h">2H</button>
+                <button type="button" class="btn btn-timeframe" data-interval="4h">4H</button>
+                <button type="button" class="btn btn-timeframe" data-interval="6h">6H</button>
+                <button type="button" class="btn btn-timeframe" data-interval="12h">12H</button>
+                <div class="vr mx-2 bg-secondary opacity-25 my-1"></div>
+                <button type="button" class="btn btn-timeframe" data-interval="1d">1D</button>
+            </div>
+            <div class="dropdown indicator-dropdown">
+                <button class="btn btn-indicator dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07Z"/>
+                    </svg>
+                    Indicators
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end p-3 shadow border-0">
+                    <h6 class="dropdown-header px-0 text-uppercase fw-bold text-light">Trend Overlays</h6>
+                    <li><div class="form-check form-switch custom-switch"><input class="form-check-input ind-toggle" type="checkbox" id="ind-sma" checked><label class="form-check-label text-light" for="ind-sma">SMA (20)</label></div></li>
+                    <li><div class="form-check form-switch custom-switch"><input class="form-check-input ind-toggle" type="checkbox" id="ind-ema"><label class="form-check-label text-light" for="ind-ema">EMA (20)</label></div></li>
+                    <li><div class="form-check form-switch custom-switch"><input class="form-check-input ind-toggle" type="checkbox" id="ind-bb"><label class="form-check-label text-light" for="ind-bb">Bollinger Bands</label></div></li>
+                    <li><hr class="dropdown-divider border-secondary opacity-50 my-2"></li>
+                    <h6 class="dropdown-header px-0 text-uppercase fw-bold text-light">Oscillators (Bottom)</h6>
+                    <li><div class="form-check form-switch custom-switch"><input class="form-check-input ind-toggle" type="checkbox" id="ind-rsi" checked><label class="form-check-label text-light" for="ind-rsi">RSI (14)</label></div></li>
+                    <li><div class="form-check form-switch custom-switch"><input class="form-check-input ind-toggle" type="checkbox" id="ind-macd"><label class="form-check-label text-light" for="ind-macd">MACD</label></div></li>
+                </ul>
+            </div>
+        </div>
+        <div class="row mb-4" id="chart-section">
+            <div class="col-12">
+                <div class="card premium-card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 py-3">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="text-light-50 small text-uppercase fw-bold me-2" style="letter-spacing: 0.5px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-palette-fill me-1" viewBox="0 0 16 16"><path d="M12.433 10.07C14.133 10.585 16 11.15 16 8a8 8 0 1 0-8 8c1.996 0 1.826-1.504 1.649-3.08-.124-1.101-.252-2.237.351-2.92.465-.527 1.42-.237 2.433.07zM8 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM5 6.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm.5 6.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg> 
+                                Keterangan Warna
+                            </span>
+                            <div class="vr bg-secondary opacity-25 d-none d-md-block me-1"></div>
+                            <span class="badge rounded-pill fw-normal" style="background: rgba(38, 166, 154, 0.1); color: #26a69a; border: 1px solid rgba(38, 166, 154, 0.2);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" class="bi bi-circle-fill me-1 mb-1" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg> Naik (Bullish)
+                            </span>
+                            <span class="badge rounded-pill fw-normal" style="background: rgba(239, 83, 80, 0.1); color: #ef5350; border: 1px solid rgba(239, 83, 80, 0.2);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" class="bi bi-circle-fill me-1 mb-1" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg> Turun (Bearish)
+                            </span>
+                            <span class="badge rounded-pill fw-normal" style="background: rgba(41, 98, 255, 0.1); color: #2962FF; border: 1px solid rgba(41, 98, 255, 0.2);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" class="bi bi-circle-fill me-1 mb-1" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg> SMA 20
+                            </span>
+                            <span class="badge rounded-pill fw-normal" style="background: rgba(156, 39, 176, 0.1); color: #9C27B0; border: 1px solid rgba(156, 39, 176, 0.2);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" class="bi bi-circle-fill me-1 mb-1" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg> RSI
+                            </span>
+                            <span class="badge rounded-pill fw-normal" style="background: rgba(33, 150, 243, 0.1); color: #2196F3; border: 1px solid rgba(33, 150, 243, 0.2);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" class="bi bi-circle-fill me-1 mb-1" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg> MACD / Bollinger
+                            </span>
+                            <span class="badge rounded-pill fw-normal" style="background: rgba(255, 152, 0, 0.1); color: #FF9800; border: 1px solid rgba(255, 152, 0, 0.2);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" fill="currentColor" class="bi bi-circle-fill me-1 mb-1" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg> EMA / Signal
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="tvchart-container" class="w-100" style="height: 600px; position: relative;">
+                            <div id="chart-loading" class="position-absolute top-50 start-50 translate-middle" style="z-index: 10;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Coinbase logo moved to after fallback -->
+                        <div id="numeric-fallback" class="w-100 d-none d-flex flex-column align-items-center justify-content-center" style="height: 600px; background: #161b22;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#f85149" class="bi bi-exclamation-circle mb-3" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/>
+                            </svg>
+                            <h4 class="text-white mb-2">Grafik Historis Sementara Tidak Tersedia</h4>
+                            <p class="text-light-50 mb-4 text-center px-4">Grafik historis untuk sementara tidak dapat dimuat.</br>Harga Bitcoin secara real-time tetap tersedia dan diperbarui secara otomatis.</p>
+                            <div class="px-5 py-4 rounded-3 text-center" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                                <h6 class="text-uppercase tracking-wide text-light-50 mb-1">Harga Bitcoin Real-Time</h6>
+                                <h1 class="display-4 fw-bold text-white mb-0" id="fallback-live-price">Memuat data...</h1>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between w-100 mt-2 mb-3 px-4">
+                            <span class="d-flex align-items-center" id="chart-timezone-label" style="opacity: 0.6; font-weight: 500; font-size: 0.75rem; letter-spacing: 0.5px; color: #8b949e;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock me-2" viewBox="0 0 16 16">
+                                  <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                                  <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                                </svg>
+                                Zona Waktu Server: UTC+0
+                            </span>
+                            <span class="d-flex align-items-center" style="opacity: 0.6; font-weight: 500; font-size: 0.75rem; letter-spacing: 0.5px; color: #8b949e;">
+                                <img src="public/coinbase-com-logo.png" alt="Coinbase Logo" height="18" style="margin-right: 8px; filter: grayscale(30%);">
+                                Sumber Data: Coinbase API
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-5 justify-content-center" id="prediction-section">
+            <div class="col-12">
+                <div class="d-flex align-items-center mb-3 gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#00d2ff" class="bi bi-crosshair flex-shrink-0" viewBox="0 0 16 16">
+                          <path d="M8.5.5a.5.5 0 0 0-1 0v.518A7 7 0 0 0 1.018 7.5H.5a.5.5 0 0 0 0 1h.518A7 7 0 0 0 7.5 14.982v.518a.5.5 0 0 0 1 0v-.518A7 7 0 0 0 14.982 8.5h.518a.5.5 0 0 0 0-1h-.518A7 7 0 0 0 8.5 1.018zm-6.48 7A6 6 0 0 1 7.5 2.02v.48a.5.5 0 0 0 1 0v-.48a6 6 0 0 1 5.48 5.48h-.48a.5.5 0 0 0 0 1h.48a6 6 0 0 1-5.48 5.48v-.48a.5.5 0 0 0-1 0v.48A6 6 0 0 1 2.02 8.5h.48a.5.5 0 0 0 0-1zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/>
+                        </svg>
+                        <h3 class="fw-bold mb-0 text-white" id="pred-time" style="letter-spacing: 0.5px; text-shadow: 0 0 10px rgba(0, 210, 255, 0.3);">Memuat waktu prediksi...</h3>
+                    </div>
+                    <div class="flex-fill bg-secondary opacity-25" style="height: 2px;"></div>
+                </div>
+            </div>
+            <div class="col-12" id="prediction-panel-container">
+                <div class="position-relative d-flex align-items-center w-100">
+                    <button class="btn btn-outline-secondary rounded-circle me-3 prediction-nav shadow-sm d-flex justify-content-center align-items-center" id="btn-pred-prev" style="width: 50px; height: 50px; border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); transition: all 0.3s;" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/></svg>
+                    </button>                    <div class="prediction-panel rounded-4 overflow-hidden d-flex flex-column shadow-lg flex-fill position-relative" id="prediction-boxes" style="background: linear-gradient(145deg, #161b22, #0d1117); border: 1px solid rgba(255,255,255,0.05);">
+                        <!-- TOP SECTION: GAUGE AND DATA -->
+                        <div class="d-flex flex-column flex-lg-row">
+                            <!-- LEFT: SINGLE GAUGE -->
+                            <div class="p-4 d-flex flex-column justify-content-center align-items-center border-end border-secondary border-opacity-25" style="flex: 1;">
+                                <h6 class="text-uppercase text-light-50 fw-bold mb-4 text-center" style="letter-spacing: 1px;">Probabilitas AI <i class="bi bi-robot text-primary"></i></h6>
+                                <div class="position-relative text-center">
+                                    <svg width="150" height="150" viewBox="0 0 100 100">
+                                        <!-- Red background (Turun) -->
+                                        <circle cx="50" cy="50" r="42" fill="none" stroke="#ef5350" stroke-width="12"></circle>
+                                        <!-- Green foreground (Naik) -->
+                                        <circle id="circle-naik" cx="50" cy="50" r="42" fill="none" stroke="#26a69a" stroke-width="12" stroke-dasharray="264" stroke-dashoffset="132" stroke-linecap="butt" style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 0 6px rgba(38,166,154,0.5));"></circle>
+                                    </svg>
+                                    <div class="position-absolute top-50 start-50 translate-middle w-100">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <div class="text-success fw-bold" style="font-size: 1.4rem; text-shadow: 0 0 10px rgba(38,166,154,0.5);"><span id="val-naik">50.0</span><span style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">%</span></div>
+                                            <div style="height: 1px; width: 60px; background: rgba(255,255,255,0.1); margin: 2px 0;"></div>
+                                            <div class="text-danger fw-bold" style="font-size: 1.4rem; text-shadow: 0 0 10px rgba(239,83,80,0.5);"><span id="val-turun">50.0</span><span style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">%</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-center w-100 mt-4 gap-3">
+                                    <span class="badge rounded-pill fw-normal shadow-sm" style="background: rgba(38, 166, 154, 0.1); border: 1px solid rgba(38, 166, 154, 0.2); padding: 6px 12px;">
+                                        <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem; vertical-align: middle; margin-right: 4px;"></i> <span class="text-light-50 fw-bold" style="letter-spacing: 1px;">LONG / UP</span>
+                                    </span>
+                                    <span class="badge rounded-pill fw-normal shadow-sm" style="background: rgba(239, 83, 80, 0.1); border: 1px solid rgba(239, 83, 80, 0.2); padding: 6px 12px;">
+                                        <i class="bi bi-circle-fill text-danger" style="font-size: 0.5rem; vertical-align: middle; margin-right: 4px;"></i> <span class="text-light-50 fw-bold" style="letter-spacing: 1px;">SHORT / DOWN</span>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- RIGHT: 2x3 DATA GRID -->
+                            <div class="p-4 d-flex flex-column justify-content-center" style="flex: 1.5;">
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="p-3 rounded-4 shadow-sm text-end" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                            <div class="text-light-50 mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 1px;">VOLUME (24H)</div>
+                                            <div class="fw-bold text-white font-monospace fs-5" id="val-volume">---</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 rounded-4 shadow-sm text-end" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                            <div class="text-light-50 mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 1px;">VOLATILITAS</div>
+                                            <div class="fw-bold text-warning font-monospace fs-5" id="val-volatility">---</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 rounded-4 shadow-sm text-end" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                            <div class="text-light-50 mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 1px;">RSI (14)</div>
+                                            <div class="fw-bold text-info font-monospace fs-5" id="val-rsi">---</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 rounded-4 shadow-sm text-end" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                            <div class="text-light-50 mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 1px;">MACD HIST</div>
+                                            <div class="fw-bold text-white font-monospace fs-5" id="val-macd">---</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 rounded-4 shadow-sm text-end" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                            <div class="text-light-50 mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 1px;">ADX TREN</div>
+                                            <div class="fw-bold text-white font-monospace fs-5" id="val-adx">---</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 rounded-4 shadow-sm text-end" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                            <div class="text-light-50 mb-1 fw-semibold" style="font-size: 0.7rem; letter-spacing: 1px;">TREN SMA 50</div>
+                                            <div class="fw-bold text-primary font-monospace fs-5" id="val-trend">---</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BOTTOM: VALIDATION STAMP -->
+                        <div id="validation-stamp" class="p-4 border-top border-secondary border-opacity-25 d-none position-relative" style="background: rgba(13, 17, 23, 0.8);">
+                            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(90deg, rgba(38,166,154,0.05) 0%, rgba(239,83,80,0.05) 100%); pointer-events: none;"></div>
+                            
+                            <div class="d-flex flex-column flex-xl-row align-items-center justify-content-between position-relative z-1 gap-4">
+                                <div class="d-flex flex-column text-center text-xl-start">
+                                    <div class="text-light-50 fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 2px;"><i class="bi bi-shield-check me-1"></i> STATUS OBSERVASI AI</div>
+                                    <div id="stamp-container" class="d-inline-block px-3 py-1 rounded-1" style="border-left: 4px solid #26a69a; background: rgba(255,255,255,0.03);">
+                                        <h4 id="stamp-text" class="m-0 fw-bolder text-uppercase text-success" style="letter-spacing: 2px; text-shadow: 0 0 10px rgba(38,166,154,0.3);">✅ VALID: TERBUKTI NAIK</h4>
+                                    </div>
+                                </div>
+                                
+                                <div id="stamp-prices" class="d-flex align-items-stretch shadow-lg rounded-3 overflow-hidden" style="border: 1px solid rgba(255,255,255,0.1);">
+                                    <div class="bg-dark px-4 py-3 text-center position-relative" style="border-right: 1px dashed rgba(255,255,255,0.1);">
+                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%); pointer-events: none;"></div>
+                                        <div style="font-size: 0.65rem; color: #8b949e; letter-spacing: 1px; margin-bottom: 2px;">HARGA AWAL</div>
+                                        <strong id="stamp-start-price" class="text-white" style="font-family: 'Courier New', monospace; font-size: 1.25rem;">$0.00</strong>
+                                    </div>
+                                    <div class="d-flex align-items-center px-3" style="background: rgba(255,255,255,0.02);">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#8b949e" class="bi bi-chevron-double-right" viewBox="0 0 16 16">
+                                          <path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708z"/>
+                                          <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="bg-dark px-4 py-3 text-center position-relative">
+                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%); pointer-events: none;"></div>
+                                        <div style="font-size: 0.65rem; color: #8b949e; letter-spacing: 1px; margin-bottom: 2px;">HARGA CLOSE</div>
+                                        <strong id="stamp-end-price" class="text-white" style="font-family: 'Courier New', monospace; font-size: 1.25rem;">$0.00</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-secondary rounded-circle ms-3 prediction-nav shadow-sm d-flex justify-content-center align-items-center" id="btn-pred-next" style="width: 50px; height: 50px; border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); transition: all 0.3s;" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
+                    </button>
+                </div>
+                <div id="prediction-failure" class="d-none text-center py-5 px-4 rounded-3 border border-danger shadow-sm" style="background: rgba(248, 81, 73, 0.1);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#f85149" class="bi bi-robot mb-3" viewBox="0 0 16 16">
+                      <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.889a28.02 28.02 0 0 1 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z"/>
+                      <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z"/>
+                    </svg>
+                    <h4 class="text-danger fw-bold mb-2">Prediksi Sementara Tidak Tersedia</h4>
+                    <p class="text-light-50 mb-0">Sistem prediksi untuk sementara belum dapat menghasilkan hasil prediksi.</br>Anda tetap dapat menggunakan data pasar dan data historis untuk melakukan analisis secara mandiri.</p>
+                </div>
+                <div class="text-center mt-3">
+                    <small class="text-light-50 fst-italic">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-exclamation-triangle me-1" viewBox="0 0 16 16">
+                          <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z"/>
+                          <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/>
+                        </svg>
+                        Disclaimer: Prediksi yang ditampilkan merupakan hasil analisis statistik dan algoritma machine learning sehingga tidak menjamin akurasi 100%.</br>Hasil prediksi sebaiknya digunakan sebagai informasi pendukung dalam proses pengambilan keputusan dan tetap disertai dengan analisis teknikal maupun fundamental secara mandiri.
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center pb-5" id="faq-section">
+            <div class="col-12">
+                <div class="d-flex align-items-center mb-4 gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#00d2ff" class="bi bi-question-circle flex-shrink-0" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                    </svg>
+                    <h3 class="fw-bold mb-0 text-white" id="faq-title" style="letter-spacing: 0.5px; text-shadow: 0 0 10px rgba(0, 210, 255, 0.3);">Frequently Asked Questions (FAQ)</h3>
+                </div>
+                <div class="accordion custom-accordion" id="faqAccordion">
+                    <div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                Apa itu XGBCoin?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                XGBCoin adalah aplikasi berbasis web yang dirancang untuk memprediksi arah pergerakan harga Bitcoin secara real-time menggunakan algoritma XGBoost. Sistem ini memanfaatkan data pasar dari Coinbase API dan 30 indikator teknikal sebagai fitur masukan untuk menghasilkan probabilitas arah pergerakan harga Bitcoin pada periode satu jam berikutnya. Hasil prediksi disajikan sebagai informasi pendukung dalam proses analisis pasar.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                Bagaimana cara kerja model XGBoost pada sistem ini?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Sistem memperoleh data harga Bitcoin secara otomatis melalui Coinbase API, kemudian menghitung 30 indikator teknikal utama seperti RSI, Moving Average, MACD, Bollinger Bands, dan indikator volatilitas lainnya berdasarkan sekitar 200 data candlestick per jam (hourly candles). Seluruh fitur tersebut digunakan sebagai masukan untuk model XGBoost dalam memprediksi probabilitas arah pergerakan harga Bitcoin pada periode satu jam berikutnya.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                Mengapa menggunakan algoritma XGBoost?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                XGBoost dipilih karena memiliki performa yang baik dalam menangani data tabular, mampu mempelajari hubungan nonlinier antar fitur, serta efisien dalam proses pelatihan maupun prediksi. Selain itu, XGBoost dikenal memiliki akurasi yang tinggi pada berbagai permasalahan klasifikasi.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                Dari mana sumber data Bitcoin diperoleh?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Data harga Bitcoin diperoleh melalui Coinbase API yang menyediakan informasi pasar secara berkala. Data tersebut digunakan sebagai dasar dalam perhitungan indikator teknikal dan proses prediksi oleh model XGBoost.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                Seberapa sering data dan prediksi diperbarui?
+                            </button>
+                        </h2>
+                        <div id="collapseFive" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Data pasar diperbarui secara berkala sesuai dengan pembaruan data yang tersedia dari Coinbase API. Setiap kali data baru diterima, sistem akan menghitung ulang indikator teknikal dan menghasilkan prediksi terbaru berdasarkan kondisi pasar terkini.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                                Apa arti probabilitas naik dan turun?
+                            </button>
+                        </h2>
+                        <div id="collapseSix" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Probabilitas menunjukkan tingkat keyakinan model terhadap kemungkinan arah pergerakan harga Bitcoin pada periode berikutnya. Sebagai contoh, probabilitas naik sebesar 75% menunjukkan bahwa model menilai peluang harga bergerak naik lebih besar dibandingkan turun. Namun, probabilitas tersebut tidak menjamin bahwa harga pasti akan bergerak sesuai prediksi.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeven" aria-expanded="false" aria-controls="collapseSeven">
+                                Apakah prediksi XGBCoin selalu akurat?
+                            </button>
+                        </h2>
+                        <div id="collapseSeven" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Tidak. Prediksi yang dihasilkan bersifat probabilistik dan tidak menjamin akurasi 100%. Pergerakan harga Bitcoin dipengaruhi oleh berbagai faktor, seperti sentimen pasar, kondisi ekonomi global, kebijakan pemerintah, maupun peristiwa lain yang tidak seluruhnya dapat direpresentasikan oleh data historis. Oleh karena itu, hasil prediksi sebaiknya digunakan sebagai informasi pendukung, bukan sebagai satu-satunya dasar pengambilan keputusan.
+                            </div>
+                        </div>
+                    </div>
+					<div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEight" aria-expanded="false" aria-controls="collapseEight">
+                                Apakah XGBCoin memberikan sinyal beli atau jual?
+                            </button>
+                        </h2>
+                        <div id="collapseEight" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Tidak. XGBCoin tidak memberikan rekomendasi untuk membeli, menjual, ataupun menahan aset. Sistem hanya menyajikan hasil prediksi probabilitas arah pergerakan harga berdasarkan model XGBoost. Seluruh keputusan investasi sepenuhnya berada pada pengguna.
+                            </div>
+                        </div>
+                    </div>
+					<div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNine" aria-expanded="false" aria-controls="collapseNine">
+                                Mengapa hasil prediksi dapat berbeda dengan kondisi pasar?
+                            </button>
+                        </h2>
+                        <div id="collapseNine" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Model XGBoost menghasilkan prediksi berdasarkan pola yang dipelajari dari data historis dan indikator teknikal. Namun, pasar kripto dapat berubah secara cepat akibat berita penting, perubahan regulasi, aktivitas perdagangan dalam jumlah besar, maupun faktor eksternal lainnya yang tidak selalu tercermin pada data historis. Oleh karena itu, hasil prediksi tidak selalu sama dengan kondisi pasar yang sebenarnya.
+                            </div>
+                        </div>
+                    </div>
+					<div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTen" aria-expanded="false" aria-controls="collapseTen">
+                                Indikator teknikal apa saja yang digunakan?
+                            </button>
+                        </h2>
+                        <div id="collapseTen" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Sistem menggunakan 30 indikator teknikal sebagai fitur masukan model, di antaranya Relative Strength Index (RSI), Moving Average (MA), Moving Average Convergence Divergence (MACD), Bollinger Bands, Average True Range (ATR), Commodity Channel Index (CCI), Average Directional Index (ADX), Stochastic Oscillator, serta berbagai indikator momentum, tren, dan volatilitas lainnya.
+                            </div>
+                        </div>
+                    </div>
+					<div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEleven" aria-expanded="false" aria-controls="collapseEleven">
+                                Apakah sistem ini dapat digunakan untuk aset kripto selain Bitcoin?
+                            </button>
+                        </h2>
+                        <div id="collapseEleven" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Model dikembangkan dan diuji menggunakan data Bitcoin sehingga hasil prediksi hanya ditujukan untuk aset tersebut. Untuk digunakan pada aset kripto lain, model perlu dilatih kembali menggunakan data historis dari aset yang bersangkutan.
+                            </div>
+                        </div>
+                    </div>
+					<div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwelve" aria-expanded="false" aria-controls="collapseTwelve">
+                                Mengapa menggunakan Coinbase API?
+                            </button>
+                        </h2>
+                        <div id="collapseTwelve" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Coinbase API dipilih karena menyediakan akses terhadap data pasar Bitcoin yang dapat diperoleh secara otomatis dan digunakan sebagai sumber data dalam proses pembentukan indikator teknikal serta prediksi oleh model XGBoost.
+                            </div>
+                        </div>
+                    </div>
+					<div class="accordion-item mb-3 border-0 rounded-3 overflow-hidden shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThirteen" aria-expanded="false" aria-controls="collapseThirteen">
+                                Apakah hasil prediksi dapat dijadikan dasar investasi?
+                            </button>
+                        </h2>
+                        <div id="collapseThirteen" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-light-50" style="text-align: justify; line-height: 1.7;">
+                                Tidak. Sistem ini dikembangkan sebagai bagian dari penelitian mengenai penerapan algoritma XGBoost dalam memprediksi arah pergerakan harga Bitcoin. Hasil prediksi sebaiknya digunakan sebagai referensi tambahan dan tidak dimaksudkan sebagai saran atau rekomendasi investasi. Pengguna tetap disarankan untuk melakukan analisis teknikal, analisis fundamental, serta mempertimbangkan manajemen risiko sebelum mengambil keputusan.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer class="mt-auto py-5" style="background-color: #0d1117; border-top: 1px solid rgba(255,255,255,0.05);">
+        <div class="container">
+            <div class="d-flex justify-content-center align-items-center gap-2 mb-4">
+                <img src="public/logo.png" alt="Logo" width="28" height="28" class="rounded-circle opacity-75">
+                <span class="fs-5 fw-bold text-white tracking-wide opacity-75">XGBCoin</span>
+            </div>
+            <div class="mb-5">
+                <span class="text-secondary small text-uppercase fw-bold d-block text-center mb-4" style="letter-spacing: 1px;">Tim Pengembang</span>
+                <div class="row g-4 justify-content-center">
+                    <div class="col-12 col-md-4">
+                        <div class="p-4 rounded-4 text-light-50 fw-semibold d-flex flex-column align-items-center shadow-sm h-100 justify-content-center text-center" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; cursor: default;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(0,210,255,0.3)'; this.style.transform='translateY(-3px)'" onmouseout="this.style.color=''; this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-person-fill mb-2 opacity-75" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+                            <span style="font-size: 0.95rem;">Dr. Ir. Raymond Sutjiadi, ST., M.Kom., IPM</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-4 rounded-4 text-light-50 fw-semibold d-flex flex-column align-items-center shadow-sm h-100 justify-content-center text-center" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; cursor: default;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(0,210,255,0.3)'; this.style.transform='translateY(-3px)'" onmouseout="this.style.color=''; this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-person-fill mb-2 opacity-75" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+                            <span style="font-size: 0.95rem;">Wilson Leonardo</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-4 rounded-4 text-light-50 fw-semibold d-flex flex-column align-items-center shadow-sm h-100 justify-content-center text-center" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; cursor: default;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(0,210,255,0.3)'; this.style.transform='translateY(-3px)'" onmouseout="this.style.color=''; this.style.background='rgba(255,255,255,0.02)'; this.style.borderColor='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-person-fill mb-2 opacity-75" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+                            <span style="font-size: 0.95rem;">Timothy John Pattiasina, ST., M.Kom.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center text-secondary small pt-4" style="border-top: 1px dashed rgba(255,255,255,0.1);">
+                &copy; <script>document.write(new Date().getFullYear())</script> XGBCoin. All Rights Reserved.
+            </div>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="js/chart.js?v=4"></script>
+</body>
+</html>
